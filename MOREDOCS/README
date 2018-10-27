@@ -1,0 +1,699 @@
+>>>> NOTE: All of the items that follow have been added since the
+>>>> printing of the P.D.Q. 3.00 manual.
+
+
+SWAPPING TSR CORRECTIONS AND AMPLIFICATIONS
+===========================================
+
+Between the time the P.D.Q. manual was written and the Swap2Disk and Swap2EMS
+routines were completed a few minor changes and additions were made.  These
+are listed below, in order of importance.  Many of the issues addressed are
+reflected in the DEMOSWAP.BAS example program.
+
+1.  The discussion that explains how to call Swap2Disk and Swap2EMS is not
+    entirely correct.  The manual states that they may be called at any point
+    before calling EndTSR, but that is not the whole story.  These routines
+    must also be called before invoking PopUpHere.  You may note this on page
+    4-4 of your manual.
+
+2.  Do NOT use the /far or /packc LINK switches with TSR programs that swap
+    to disk or expanded memory.
+
+3.  When a TSR that swaps to disk is removed from memory, the temporary swap
+    file is deleted automatically.  However, if only a file name was given
+    when Swap2Disk was called and the user has since changed directories, it
+    may not be possible to find and delete the swap file.  To solve this we
+    recommend that you specify a complete drive and path along with the name.
+    For example, you could place the file into the root directory of drive C
+    by using "C:\MYTSR.SWP" or the like.
+
+    You could also get the current directory and use that, but this requires
+    more work.  Some users create a TEMP environment variable for just this
+    purpose, and the following code fragment may be used to derive a suitable
+    file name:
+
+        Path$ = ENVIRON$("TEMP")                'get the TEMP variable
+        IF LEN(Path$) = 0 THEN Path$ = "C:"     'if none use drive C:
+        IF RIGHT$(Path$, 1) <> "\" THEN         'append a trailing backslash
+          Path$ = Path$ + "\"                   '  if needed
+        END IF
+        FileName$ = Path$ + "MYTSR.$$$"         'create an unlikely name
+
+    You may note this on page 4-4 of your P.D.Q. owner's manual.
+
+4.  Although the manual states on page 4-5 that disk swap files are created
+    with a hidden attribute, we decided at the last minute that this would
+    likely add more confusion than it was worth.
+
+5.  If you need to allocate DOS memory, either manually using AllocMem or
+    automatically with REDIM, be sure to do so before calling Swap2Disk.  At
+    the time Swap2Disk and Swap2EMS are called, they assess the amount of
+    memory your program is using.  This way they can know if sufficient disk
+    space or EMS memory is available, and in turn report success or failure.
+    Since you must allocate all memory in a TSR before going resident, this
+    shouldn't be a limitation.  Just be sure to make the allocations early in
+    the program, before calling Swap2Disk or Swap2EMS.  You may note this on
+    page 4-6 of the manual.
+
+6.  If you plan to use floating point math in a swapping TSR and no 8087 is
+    present, it is not necessary to use the EnableFP and DisableFP routines.
+    Since the entire interrupt vector table is swapped anyway, the floating
+    point interrupts are also exchanged.  However, if an 8087 coprocessor is
+    present, these routines are necessary to preserve its state.  Note that
+    no harm is caused by using these routines in either case, so you may want
+    to call them just to be safe.  Using floating point in a TSR program is
+    discussed on pages 4-20 and 4-21 in the P.D.Q. manual.
+
+7.  Even though all swapping TSR programs use the same amount of memory when
+    they are idle (about 3K), you should still use as small a string pool as
+    possible.  When a TSR program is swapped to disk, memory is exchanged in
+    1K blocks which takes a finite amount of time.  Note that more data must
+    be swapped than you might think--for each block that is read into memory
+    from disk, a corresponding portion of the currently running program must
+    also be written to the disk file.  Therefore, programs that require less
+    memory when running will also use a smaller swap file, and that file will
+    be read and written more quickly.
+
+8.  As described in the manual, if Swap2EMS is unable to use expanded memory
+    it returns 0 (failure) to show that.  As an added enhancement Swap2EMS
+    also sets BASIC's ERR function to indicate why expanded memory couldn't
+    be used.  If ERR is set to 7 ("Out of memory"), EMS memory is installed
+    but there is not enough available to hold the swapped program.  If ERR is
+    instead set to 73 ("Feature unavailable"), then EMS is not installed at
+    all.  It is not necessary to test ERR if Swap2EMS fails, and this added
+    information is made available only for completeness.  You may note this
+    on page 4-5 in your manual.
+
+
+Contrary to the statement in the P.D.Q. manual on page 4-6 under the heading
+"Deinstallation", a swapping TSR can indeed remove a previously installed
+copy of itself.  The trick, as you can see by examining DEMOSWAP.BAS, is to
+use CALL INTERRUPT to communicate with the resident copy.  DEMOSWAP.BAS uses
+the SwapCode function to see if another program--in this case, the subsequent
+copy--has used CALL INTERRUPT to activate it.  DEMOSWAP.BAS is a swapping
+version of SCRNCAP.BAS.
+
+The KILLTSR.BAS program is used to remove a swapping TSR from memory using
+the techniques described on page 4-8 of the P.D.Q. manual.  KILLTSR expects a
+command line argument with the program ID code of the swapping TSR to be
+removed.  If no ID code is given it defaults to &H830, which is the ID code
+for DEMOSWAP.BAS.
+
+SWAP.BAT is a simple batch file you can use to create swapping TSR programs,
+or use as a basis for other batch files of your own.  The first parameter you
+specify is the name of the BASIC program to compile.  The second and third
+parameters let you specify additional options to LINK.  For example, when
+creating the DEMOSWAP program we recommend using the STR00512.OBJ string pool
+stub file.  Therefore, you would use this command to create DEMOSWAP.EXE:
+
+    SWAP DEMOSWAP STR00512
+
+
+OTHER PROGRAMMING NOTES
+=======================
+
+Michael H. Shacter wrote to us pointing out that the method we show in the
+manual to isolate the high-byte portion of a CPU register used with CALL
+INTERRUPT can fail if the register value is greater than &H7F.  The following
+code works in all cases:
+
+    AH = ((AX AND &HFF00) \ 256) AND &HFF
+
+
+IMPROVED LINKING WITH BASIC .LIB FILES
+======================================
+
+Near the bottom of page 2-2 the manual states that when linking with .LIB
+files that contain BASIC code the BASIC library must be listed first.  This
+issue has been identified as a problem with P.D.Q. and the cause has now been
+corrected.  BASIC libraries may be listed in any order.
+
+
+FIELD NOW SUPPORTED
+===================
+
+P.D.Q. now fully supports the FIELD statement and the versions of GET and PUT
+that work with fielded files.  There are only a few restrictions that you
+need to be aware of, and these are listed following.
+
+    þ Unlike regular BASIC you may not assign a string once it has been
+      fielded.  Although BASIC allows this, it always destroys the field
+      buffer in the process, so this is not really much of a limitation
+      anyway.  But in P.D.Q. you -must- use LSET or RSET when assigning a
+      fielded string to avoid corrupting string memory.
+
+      Also, you may not specify the same string with two different files.
+      Again, your program won't work correctly with the same string used
+      for two different files anyway:
+
+        FIELD #1, 10 AS A$, 20 AS B$  'assign A$ to File 1's buffer
+        FIELD #2, 5 AS A$, 35 AS C$   'ERROR: A$ can't be used with File 2
+
+      It is, however, perfectly okay to use the same string in more than
+      one FIELD statement with the same file number:
+
+        FIELD #1, 10 AS A$, 20 AS B$  'use A$ with File 1
+        FIELD #1, 15 AS A$, 15 AS C$  'okay to use it again with File 1
+
+    þ You may not specify more than 320 different strings in a file's
+      FIELD buffer, even if multiple FIELD statements are used.
+
+    þ FIELD may not be used with the SMALLDOS library.
+
+    þ FIELD may not be used directly in a TSR program because it claims
+      far (DOS) memory.  However, you can work around this limitation
+      by claiming 320 * 2 = 640 bytes with AllocMem for each file you
+      intend to use FIELD with.  You must claim the memory before calling
+      EndTSR, and then free it up again before using FIELD after popping
+      up.  This is similar to the way memory is reserved in the SHELL.BAS
+      example program.
+
+Because field buffers must be released when CLOSE or RESET are used, a small
+amount of overhead (about 60 bytes of code and 90 bytes of near data) had to
+be added to those statements.  To eliminate that added code and data you can
+link with the _NOFIELD.OBJ stub file, as described in the manual section
+"Linking with stub files".
+
+
+MICROSOFT BINARY FORMAT NOW SUPPORTED
+=====================================
+
+The entire family of MBF routines is now supported: CVDMBF, CVSMBF, MKDMBF$,
+and MKSMBF$.  Likewise, if you compile with the /mbf switch BASIC will call
+those versions of the conversion routines automatically.
+
+
+WORKING WITH DESQVIEW
+=====================
+
+DESQVIEW.BAS is a new demonstration program that shows how to create programs
+that are DESQview-aware and that print to the special DESQView video segment.
+
+
+RELEASE THE ENVIRONMENT TO REDUCE MEMORY
+========================================
+
+ReleaseEnv is a new routine that reduces the amount of memory a P.D.Q. TSR
+program occupies when resident.  It works by releasing the TSR program's
+environment segment, thus preventing the environment from becoming resident
+along with the main program.
+
+Call ReleaseEnv as follows, just before the call to EndTSR:
+
+    EndIt:
+      CALL ReleaseEnv
+      CALL EndTSR(ID$)
+
+Note that releasing a program's environment prevents memory mapping utilities
+such as the P.D.Q. MAP.BAS program from being able to report the name of the
+resident program.  Of course, this causes no harm.  In many cases the memory
+savings can be as high as several hundred bytes, depending on the current
+size of the DOS environment (number and length of the environment variables).
+
+Also note that ReleaseEnv should not be used in TSR programs that swap to
+disk or expanded memory.  The swapping routines already release the TSR
+program's environment to minimize memory usage, so you will notice that their
+names are also not listed when using MAP.
+
+ReleaseEnv is shown in context in the CLOCK.BAS example program.  When added
+to CLOCK.BAS, the call to ReleaseEnv increases the program size by 32 bytes;
+however, the memory occupied on our test PC is reduced by 192 bytes!
+
+Special thanks to P.D.Q. user Michael H. Shacter for submitting this code.
+
+
+SET FILE DATES AND TIMES WITH FSTAMP
+====================================
+
+FSTAMP lets you set a new date and/or time for any file or group of files.
+The syntax is as follows:
+
+    FSTAMP filespec [/d [newdate]] [/t [newtime]]
+
+The file specification can be either a single file name or a group of files
+using the ? and * DOS wild cards.  If /d is given alone, the file is set to
+the current date.  If a valid date follows the /d switch that date is used.
+If /d is omitted entirely the date is left alone.  Note that to be valid, a
+date must have the format mm-dd-yy or mm/dd/yy or mm-dd-yyyy or mm/dd/yyyy.
+
+Likewise, using /t alone sets the file time to the current value of TIME$.
+Using /t followed by a valid time uses that time.  The time parameter can be
+either an hour only, an hour and a minute, or an hour, minute, and second.
+The following are all valid time values:
+
+    20          'sets the time to 8:00 pm
+    1:30        'sets the time to 1:30 am
+    13:45:12    'sets the time to 1:45:12 pm
+
+Due more to laziness than anything else, FSTAMP requires linking with our
+QuickPak Professional library.
+
+
+BUFOUT PROVIDES FASTER FILE OUTPUT IN P.D.Q.
+============================================
+
+In the same way that the BufIn function provides very fast buffered text
+input, BufOut improves the speed of sequential file writing by more than 300
+percent.  Unlike regular BASIC, P.D.Q. does not buffer disk writes in memory.
+Each time you use PRINT # to print a line of text to a disk file, the P.D.Q.
+PRINT routine calls DOS to print the string.  But when many short strings are
+being written, the overhead of calling DOS repeatedly reduces the overall
+speed of the file writing.
+
+To counter this, regular BASIC provides an output file buffer.  When text is
+sent to disk with PRINT #, BASIC stores the data in a holding area until a
+certain number of characters accumulate.  This number is established with the
+LEN = argument when the file was opened.  To reduce the size of your programs
+P.D.Q. does not perform either input or output file buffering.  Therefore, if
+you use BufOut instead of PRINT #, this assembly language routine will store
+the text and send it to disk only when there is enough to make the DOS call
+worthwhile.  BufOut uses an output buffer size of 4,096 bytes, which is about
+optimimum for most file access situations.
+
+The syntax for BufOut is as follows:
+
+    CALL BufOut(FileName$, Text$, Terminator$)
+
+Here, FileName$ is the file name, or a null string to indicate that you are
+done writing and the file is to be closed.  The first time BufOut is called
+it opens the file.  Subsequent calls then write to that same file.  When you
+are done and want to close the file, use a null string for FileName$.
+
+Text$ is the text to be written to the file, and Terminator$ is the string
+used to end the current line.  In most cases you will use CHR$(13) + CHR$(10)
+for Terminator$ since that is how normal DOS text file lines are terminated.
+You could also use a comma for all but the last item in each line to create a
+comma-delimited data file.  Using a null string for Terminator$ is equivalent
+to printing to the file with a trailing semicolon:
+
+    PRINT #1, Text$;
+
+Note that no line of text may exceed 4,096 characters in length.  If a single
+line exceeds 4,096 bytes the excess will be truncated.  This maximum length
+does not include the terminator which is handled separately.  Also note that
+BufOut is intended mainly for normal sequential text output, when the data is
+relatively short lines of text.  That is, BufOut will not help a program that
+is already writing data to a file in large pieces.
+
+The following short program fragment shows BufOut in context, and it assumes
+that a string array already holds the text to be printed.
+
+  FileName$ = "TESTFILE.TXT"             'this is the file name to write to
+  Terminator$ = CHR$(13) + CHR$(10)      'end each line with a standard CRLF
+  FOR X% = 1 TO UBOUND(Array$)           'print the entire array
+    CALL BufOut(FileName$, Array$(X%), Terminator$)
+  NEXT
+  CALL BufOut(Null$, Ignored$, Ignored$) 'Null$ is not defined and is blank
+
+Finally, note that BufOut is meant for use with only one file at a time.
+
+
+BRUCE TONKIN TO THE RESCUE!
+===========================
+
+Well-known BASIC programming guru and Crescent friend Bruce Tonkin has
+written a complete set of transcendental math functions for use with P.D.Q.
+version 3.  Bruce has included 19 routines to calculate sines, cosines,
+tangents, arctangents, powers, square roots, and more.  These functions are
+used exactly like their regular BASIC counterparts, except they have names
+beginning with the letters PDQ.  For example, instead of SQR you will use
+PDQsqr.  These functions are designed to accept and return double-precision
+values only.  
+
+All of the functions are in the TRIG.BAS file, along with appropriate DECLARE
+and CONST statements.  Simply copy the functions you need from this file into
+your own programs, being sure to also copy the DEFINT statement within each
+function header and the relevant CONST statements in the main module-level
+portion of the program.
+
+
+GET FASTER DISK SWAPPING WITH _SWAP4K.OBJ
+=========================================
+
+To minimize the size of the resident kernel for TSR programs that are swapped
+to disk or EMS, we reserved only 1K for use as a swap buffer.  (A swap buffer
+is where in memory your program and the underlying application pass through
+on their way to and from disk.)  The problem with such a small buffer size is
+that it takes many disk reads and writes to complete the swap.  With large
+programs it can take as long as ten seconds before a program pops up or down.
+
+If you prefer to exchange a slightly larger resident kernel for faster access
+time you can link with the _SWAP4K.OBJ stub file as follows:
+
+    LINK /NOD/NOE/EX POPSWAP program _SWAP4K , program , NUL, PDQ ;
+
+Or use the supplied SWAP.BAT batch file to do most of the work:
+
+    SWAP program _SWAP4K [STRxxxxx]
+
+By default a swapping TSR that uses either disk or EMS leaves less than 3K of
+code resident.  When both EMS and disk are used the kernel is just over 3K.
+And when linking with _SWAP4K.OBJ the kernel increases by 3K, but the speed
+increases substantially.
+
+
+BETTER THAN VIEW PRINT!
+=======================
+
+A lot of people have lamented that P.D.Q. doesn't support BASIC's VIEW PRINT
+statement.  The reason we didn't build VIEW PRINT into P.D.Q. is because that
+would add the necessary code to all programs that use PRINT.  To provide this
+feature -- and to go Microsoft one better -- we have written a collection of
+Window handling routines.  These improve on what BASIC offers by letting you
+specify left and right columns as well as top and bottom rows.
+
+Eight routines are provided to set the window boundaries, print text, print
+text with a carriage return/line feed, print text with word-wrapping, clear
+the window, locate the cursor within the window, and return the current row
+and column (like BASIC's CSRLIN and POS(0) functions).  The syntax for these
+routines is as follows:
+
+    CALL WindowInit(BYVAL ULRow%, BYVAL ULCol%, BYVAL LRRow%, BYVAL LRCol%)
+    CALL WindowPrint(Text$)
+    CALL WindowPrintCR(Text$)
+    CALL WindowPrintW(Text$)
+    CALL WindowCLS
+    CALL WindowLocate(BYVAL Row%, BYVAL Column%)
+    Row = WindowRow%        'function
+    Column = WindowCol%     'function
+
+WindowInit is called to set new window boundaries.  It is not necessary to
+call WindowInit before using WindowPrint, though of course you usually would.
+The initial default values are 1, 1, 25, 80.  WindowInit also checks the
+current cursor position, and moves it into the window if necessary.
+
+WindowPrint prints the text specified, containing it within the window and
+scrolling as necessary using BASIC's current COLOR settings.  WindowPrintCR
+is similar except it issues a carriage return and line feed after the text is
+printed.  That is, calling WindowPrint is like using a semicolon in BASIC:
+
+    PRINT Work$;
+
+And calling WindowPrintCR is equivalent to using a plain BASIC PRINT:
+
+    PRINT Work$
+
+WindowPrintW (the trailing "W" means word-wrap) prints a text string without
+adding a carriage return, and it will not split words in the middle.
+
+WindowCLS clears the window and places the cursor in the upper-left corner,
+and it also uses the current COLOR settings.
+
+WindowLocate sets the cursor position within the virtual window.  Note that
+the WindowLocate values are virtual, and are relative to the window's upper
+left corner.  Therefore, CALL WindowLocate(1, 1) places the physical cursor
+at the upper-left edge of the window, and not at the upper-left edge of the
+video screen.
+
+WindowRow and WindowCol return the current cursor row and column positions,
+and they parallel BASIC's CSRLIN and POS(0) functions.  Like WindowLocate,
+these functions return values relative to the upper-left corner of the window
+and not relative to the entire video screen.
+
+You can freely mix calls to the window routines with regular PRINT and LOCATE
+statements.  WindowPrint and WindowPrintCR keep track of where they last
+printed, and when the window needs to be scrolled.  However, after calling
+WindowPrint the physical cursor is placed immediately after the text that was
+just printed.  Likewise, WindowCLS positions the cursor at the upper-left
+corner of the window after it clears the windowed portion of the screen.
+Therefore, you will need to save the cursor position with CSRLIN and POS(0)
+manually if you make calls to these routines between regular BASIC PRINT
+statements.
+
+All of these routines work in screen modes other than 80 columns, but as with
+PDQPrint you must first call PDQSetWidth first.  Also, these routines do not
+honor DOS output redirection.
+
+There is only minimal error trapping such as preventing against locating the
+cursor outside of the current window boundaries.  But there's no added code
+to ensure, for example, that the upper-left window boundary is higher than
+and to the left of the lower-right boundary.  WindowInit also makes no effort
+to ensure that you use legal values.  This is done on purpose -- if you have
+a display adapter that can show, say, 132 columns, then these routines will
+accommodate that.  However, rows and columns are limited to a maximum of 255.
+
+You can also use PDQSetMonSeg and PDQSetWidth to print to an integer array or
+other block of memory, to create virtual screens of any size that are built
+in the background and then copied to display memory using BlockCopy.
+
+Because the current color value is not available in the QB and QBX editing
+environments, the Quick Library versions of these routines use an inverse
+color (black on white) only.  However, once a program has been compiled the
+current COLOR settings will be honored.
+
+These windowing routines are demonstrated in the WINDOW.BAS example program.
+
+
+SELF-RUNNING README FILES
+=========================
+
+DISPLAY.BAS is a clever new utility program that lets you create self-running
+executable README files.  Simply compile and link DISPLAY.BAS as shown in the
+program header comments.  Then copy the resultant program -and- a plain ASCII
+text file to a new executable program using the /b COPY option:
+
+    copy display.exe /b + readme.doc runme.exe
+
+When run, the new program will display the text in the original file and
+also display a "more..." prompt when the screen fills.  Again, full details
+are given in the DISPLAY.BAS header comments.
+
+
+GETCPU NOW RECOGNIZES A 486
+===========================
+
+In response to customer demand, the GetCPU function now returns a value of
+486 when the host PC has an 80486 processor installed.
+
+
+GAIN MORE ENVIRONMENT SPACE
+===========================
+
+When a program runs it receives a copy of the parent's environment.  Further,
+this copy is only as large as necessary to hold the environment variables
+that are currently defined.  Therefore, it is usually impossible to add new
+variables to the environment in a running program.  Although P.D.Q. includes
+the EnvOption routine for accessing the parent's environment, that doesn't
+help if you want to add a new variable and then Shell to another program.
+
+INCENV.BAS is a combination demo and subprogram that lets you increase the
+size of a program's copy of the environment.  It works by first allocating a
+new segment to the desired size.  Then it copies the existing environment to
+the new segment, and finally adjusts the pointers in the program's PSP to
+point to the new segment.
+
+INCENV.BAS was written by Daniel Lemye, based on an assembly language routine
+we wrote for use with regular QuickBASIC and posted on CompuServe.
+
+
+EASILY CREATE A P.D.Q. EXTENSION LIBRARY
+========================================
+
+We have provided the XTENSION.BAT file to create XTENSION.LIB which contains
+only the extensions to P.D.Q.  It works by extracting all of the extension
+routines from PDQ.LIB, and then creates a new library.  From that you then
+can easily create custom Quick Libraries containing additional routines.
+
+
+FORMAT NUMBERS SCIENTIFICALLY
+=============================
+
+PDQFORM.BAS combines a demonstration and pair of functions to let you format
+numbers in scientific notation.  PDQFORM was written by Shaun Blain.  Thanks
+Shaun!
+
+
+CLEVER PAUSE REPLACEMENT
+========================
+
+PDQPause is a silly but useful utility that replaces the DOS PAUSE command in
+batch files.  Where PAUSE stops forever until a key is pressed, PDQPause will
+continue after a specified number of seconds if no key is pressed.  We often
+use PAUSE in AUTOEXEC.BAT to allow gracefully exiting before running Windows
+or a DOS memory manager.  But usually you just want to power on your PC and
+go get a cup of coffee.  PDQPause lets you quit when you really need to, but
+without having to always wait around.  As shown here PDQPause waits up to 5
+seconds for a keypress, and then continues:
+
+    PDQPAUSE 5
+
+
+CREATE YOUR OWN DOS COMMANDS!
+=============================
+
+SAFEDEL is an example TSR that shows how to replace or disable existing DOS
+commands, or even add new ones.  SAFEDEL replaces the DOS DEL command with a
+safer version that displays each file that is about to be erased, and prompts
+the user for a Yes/No confirmation.  Complete details about how it works are
+given in the program's header comments.  This is a neat one, folks.
+
+
+DISPLAY LOADED DEVICE DRIVERS
+=============================
+
+MAPDEV is a new utility written by DOS expert Rob Hummel that displays all of
+the device drivers that are loaded.  Like Rob's MAP.BAS utility, this program
+walks through the DOS memory chain, only this time searching for devices.
+
+
+CASE-INSENSITIVE SORTING
+========================
+
+At a customer's request we made a modified version of the Sort routine that
+sorts regardless of capitalization.  This version is for use only with near
+strings, and no corresponding far strings version is included in the PDQ7.QLB
+library file.  SORT.BAS is an example for both the Sort and Sort2 routines.
+
+
+KNOWN LIMITATION
+================
+
+There is a problem using the TAB command when printing to the screen and also
+when used in conjunction with LOCATE.  PRINT accumulates how many characters
+have been printed since the last time it was used without a semicolon or a
+comma.  But when LOCATE is used the current print position is changed without
+updating the current Tab location.  Until this is fixed use this instead:
+
+    PRINT SPC(DesiredTabColumn - POS(0));
+
+
+LPRINT BINARY DATA
+==================
+
+COOK-RAW.BAS shows how to set the "Cooked" and "Raw" status for device I/O,
+and the program's header comments explain how and why this can be useful.
+
+
+
+TOM HANLIN JOINS THE CRESCENT TEAM
+==================================
+
+Tom Hanlin is known to many BASIC programmers as the author of numerous
+successful shareware add-on libraries for use with BASIC.  Tom has enhanced
+P.D.Q. for us in several important ways, as described below.
+
+    1. P.D.Q. now supports Microsoft's Visual Basic for DOS (but not when
+       using the VB/DOS forms feature).  See the file README.VBD file for
+       complete information about using P.D.Q. with VB/DOS.
+
+    2. P.D.Q. now supports non-static string functions (but not when using
+       the VB/DOS compiler).
+
+    3. P.D.Q. now supports many of BASIC's built-in graphics commands.  The
+       list of newly supported statements is as follows:
+
+       LINE
+       LPOS (supports LPT1: only)
+       PALETTE Number, Color
+       PALETTE USING ColorArray()
+       PCOPY (text modes only)
+       POINT
+       PRESET
+       PSET
+
+       Note that the plain PALETTE statement (with no parameters) is not
+       supported.  Also, LPOS is not a graphics command, but it was newly
+       added by Tom while he was working on P.D.Q. so it's listed here.
+
+
+       
+
+NEW DEMO SHOWS HOW TO EXCHANGE "MODIFIER" KEYS
+==============================================
+
+The MACRO.BAS program lets you replace a single key with one or more keys,
+but it works only for conventional keyboard characters.  Crescent customer
+Matt Hart submitted the core code for KEYSUBST.BAS, which lets you exchange
+any single key for any other.  This example swaps the CapsLock and Ctrl keys,
+though you may of course modify it to handle any other key combinations.
+
+
+
+WARNING WHEN USING SORT
+=======================
+
+The Sort routine in P.D.Q. uses the CPU's stack for saving internal pointers.
+When sorting large amounts of string data (more than a few hundred elements)
+you may experience mysterious crashes that even the /D compiler switch will
+not report.  The solution is to specify a larger stack using the /STACK:nnn
+LINK switch.  Here, "nnn" is a numeric value that specifies a new stack size,
+to override the default size of 1,024 bytes that P.D.Q. uses.
+
+
+
+NEW SHELL ROUTINE SWAPS THE PROGRAM TO DISK
+===========================================
+
+Shell2Disk is a new function that lets you execute a program similar to the
+way SHELL works, but with two unique advantages: The main program is swapped
+to disk during the shell, leaving only a small (less than 2400 bytes) kernel
+resident.  Also, the shelled program's DOS errorlevel return code is returned
+to the calling program.  A complete explanation is given in the SHELDISK.BAS
+demonstration program, along with instructions for executing batch files and
+DOS commands, and also a note for VB/DOS users.
+
+
+
+COUNT HOW MANY KEYS HAVE BEEN PRESSED
+
+KEYCOUNT.BAS is a TSR that counts the number of times a key has been pressed.
+This would be useful for logging user productivity, or performing some action
+at specified key intervals rather than after a given amount of elapsed time.
+When installed, KEYCOUNT writes a four byte data file holding the segment and
+address of its internal Count variable.  The foreground program can then read
+that variable, or clear it to start counting from zero.  A sample foreground
+program is shown in the comments of the KEYCOUNT.BAS file.
+
+
+
+SWAPPING TSR PROGRAMS ON LANTASTIC NETWORKS
+
+Some P.D.Q. users have complained to us that swapping TSRs cannot be unloaded
+when the PC is running Lantastic.  The problem is caused because P.D.Q. does
+not go through DOS to hook and unhook interrupts; rather, it writes directly
+to the PC's interrupt vector table in low memory.  The following from Robert
+Hummel explains why P.D.Q. cannot be modified to overcome this problem, and
+also why DOS memory allocation does not work as expected in swapping TSRs.
+
+  Problem: Unloading swapping TSRs under Lantastic
+
+    Normal TSRs uninstall themselves by removing the hooked vectors one at
+    a time.  This can be done just as easily with a DOS call as by writing
+    directly to low memory.  Swapping TSRs, however, use a completely
+    different paradigm.  During a normal PopDown cycle, the code checks to
+    see if a deinstall request is queued.  If so, the hooked vectors are
+    unhooked from the memory -image- of the foreground interrupt vector
+    table, not from the actual interrupt vector table in low memory.  The
+    reason for this is obvious: the foreground vectors have not yet been
+    restored to lower memory.
+
+    Eventually the foreground interrupt vector table that was saved during
+    popup is restored using a series of LOD, XCHG, and MOV instructions.
+    Trying to move the entire interrupt vector table in one chunk would
+    leave interrupts disabled for too long.  More importantly, the Int 21h
+    functions -cannot- be used because when the IVTs are swapped, the state
+    of the machine is unknown.
+
+  Problem: Using DOS allocation functions with swapping TSRs
+
+    As explained above, swapping TSRs work by removing the program from
+    a section of memory and putting their own code in.  This leaves the
+    equivalent of ragged edges in memory.  In other words, the chain of
+    memory control blocks (MCBs) is no longer continguous.  The DOS memory
+    allocation functions depend on this chain being contiguous to perform
+    their function.  Therefore, the two are incompatible.
+
+    This isn't a programming problem or bug.  It's a consequence of the
+    physics of DOS.  Saying, "you ought to be able to do that," is like
+    asking, "Why can't I allocate a block of real memory larger than one
+    megabyte?"
+
+
+
+TSR PROGRAMS AND WORD PERFECT (DOS)
+
+Word Perfect does not cooperate with TSRs, and this affects all TSR programs,
+not just those written with P.D.Q.  However, you can use the undocumented /NK
+switch when starting Word Perfect to tell it not to interfere with TSRs.
+
+  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<

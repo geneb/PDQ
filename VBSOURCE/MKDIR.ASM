@@ -1,0 +1,39 @@
+;********** MKDIR.ASM - PDQ replacement for BASIC's B$MDIR routine
+
+;Copyright (c) 1989 Ethan Winer
+; 11/3/92  Thomas G. Hanlin III   added far string support
+
+
+.Model Medium, Basic
+    Extrn P$FixStr:Proc   ;this is in FIXSTR.ASM
+    Extrn P$ZeroFile:Proc ;this is in ZEROFILE.ASM
+    Extrn P$DoError:Proc  ;this is in DOERROR.ASM
+
+.Data
+    Extrn P$PDQErr:Word   ;this is in ERRDATA.ASM
+
+.Code
+
+B$MDIR Proc, DirName:Word
+
+    Local Buffer[80]:Byte ;copy the directory name here to add a CHR$(0)
+
+    Push DirName          ;if it's a far string literal, make it a near string
+    Call P$FixStr         ;
+    Mov  DirName,AX       ;
+
+    Mov  AX,DirName       ;get the address for the directory name
+    Lea  DX,Buffer        ;get the address for the start of the buffer
+    Call P$ZeroFile       ;this copies and adds a CHR$(0) to the end for DOS
+    Mov  P$PDQErr,CX      ;assume no errors (and CX is conveniently zero)
+
+    Mov  AH,39h           ;create directory service
+    Int  21h              ;call DOS
+    Jnc  Exit             ;no error, we kool
+    Call P$DoError        ;handle the error as needed
+
+Exit:
+    Ret                   ;return to caller
+
+B$MDIR Endp
+End

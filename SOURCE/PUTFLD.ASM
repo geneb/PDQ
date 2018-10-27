@@ -1,0 +1,33 @@
+;********** PUTFLD.ASM - PDQ replacement for BASIC's B$PUT1 routine
+
+;Copyright (c) 1991 Crescent Software
+
+
+.Model Medium, Basic
+    Extrn B$PUT3:Proc       ;this is in PUT.ASM
+
+.Data
+    Extrn P$PDQErr:Word     ;this is in ERRDATA.ASM
+    Extrn P$FldDesc:Word    ;this is in FIELD2.ASM
+    
+.Code
+
+B$PUT1 Proc, FileNum:Word
+
+    Mov  AX,FileNum         ;get the BASIC file number
+    Push AX                 ;pass it on to B$PUT3
+    
+    Dec  AX                 ;convert the file number to zero-based
+    Shl  AX,1               ;times four to access a table of descriptors
+    Shl  AX,1
+    Add  AX,Offset P$FldDesc    ;now AX points to P$FldDesc(FileNum)
+    Push DS                     ;pass the segmented descriptor address
+    Push AX
+    
+    Sub  AX,AX              ;pass zero for the number of bytes
+    Push AX                 ;  to show this is a conventional string
+    Call B$PUT3             ;let BASIC's "PUT #n, , VarName" handle it
+    Ret                     ;return to BASIC
+
+B$PUT1 Endp
+End

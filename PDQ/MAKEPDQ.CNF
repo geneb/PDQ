@@ -1,0 +1,67 @@
+'Config file for PDQ compiler interface MAKEPDQ.COM
+'MAKEPDQ knows what information is being read by the position of the command
+'lines.  DO NOT change the number or order of the non-REM statement.
+'
+'------------------------------------ Notes: ----------------------------------
+'Lines beginning with a ' are comment lines. They can be deleted later to speed
+' up reading of config file by the program. If you choose to delete those rem
+' lines, take care of making a security copy of the original file for later
+' reference...
+'------------------------------------------------------------------------------
+'
+'MAKEPDQ will emit beeps and bops to signal acceptable and non acceptable
+'keypresses. You may wish to disable this "noise".
+Sound on (Yes or No) = No
+'
+'------------------------------------ Paths/filenames to external programs ----
+Full path/filename of compiler = C:\QB\BC.EXE
+Full path/filename of linker = C:\QB\LINK.EXE
+Full path/filename for editor = C:\UTIL\Q.EXE
+Full path/filename for executable compresser = C:\ZIPEUR\LZEXE.EXE
+'------------------------------------------------------------------------------
+'
+'---------------------------------- Paths to source and object files ------
+'A line ending with the equal sing would default to the active directory
+Full path for basic source files = D:\PDQ\SRC\
+Full path for ancillary files (lib, stubs, string) =
+'     (Don't forget the trailing "\" on both lines above!)
+'
+'------------------------------------- Options blocks -------------------------
+'Follows COMPILER WINDOW options block (compiler switches) and
+'the LINKER WINDOW options block (linker switches)
+'Each line either begins with double space if option not selected by default
+' or a û+SPACE ("û ") if option is selected by default.
+'Each option is seperated from descriptive text by at least one space
+'Be careful not to use the "=" in your text!
+'There has to be exactly as many option line as specified on the
+'"number of options" line.
+'------------------------------------------------------------------------------
+'
+'------------------------------------- COMPILER options -----------------------
+'COMPILER WINDOW options block:
+Number of options in compiler window = 8
+  /s  Dupe strings to obj file
+  /d  Debug on
+  /v  Check event on statement
+  /w  Check event on line
+  /e  On error goto
+  /x  Resume next is used
+  /ah Huge dynamic arrays
+  /zi CodeView information
+'End of COMPILER WINDOW options block
+'------------------------------------------------------------------------------
+'
+'------------------------------------- LINKER options -------------------------
+'LINKER WINDOW options block:
+Number of options in linker window = 8
+û /ex       Arc: not recommended with lzexe
+û /nod      No default lib
+û /noe      No external dict
+û /packcode Pack code segments
+û /far      Required by /pac
+  /seg:250  Override default 128 segments
+  /st:4096  Override default 2k stack
+  /co       Needed for CodeView
+'End of LINKER WINDOW options block
+'------------------------------------------------------------------------------
+'END OF CONFIG FILE

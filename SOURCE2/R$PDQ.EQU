@@ -1,0 +1,120 @@
+; R$PDQ.EQU
+;
+; Contains all the equates used in my modules. - rlh.
+;----------------------------------------------------------------------
+;       Copyright (c) 1989-1991 Crescent Software
+;       Copyright (c) 1989-1991 Schaefer Software, Robert L. Hummel
+;----------------------------------------------------------------------
+; 1/8/90        .000    Create single file.
+; 2/24/91       .001    Add tab and fp equates.
+; 10/16/91      .002    Add error codes.
+; 11/15/91      .003    Add swap buffer sizes.
+;----------------------------------------------------------------------
+ 
+;----------------------------------------------------------------------
+; General values used throughout the routines.
+;----------------------------------------------------------------------
+FALSE       EQU     0
+TRUE        EQU    -1
+ 
+;----------------------------------------------------------------------
+; Mnemonic equivalents.
+;----------------------------------------------------------------------
+BLANK       EQU   20H
+QUOTE       EQU   22H
+COMMA       EQU   2CH
+TAB         EQU     9
+CR          EQU   0DH
+LF          EQU   0AH
+ 
+;----------------------------------------------------------------------
+; These are used when scanning strings.
+;----------------------------------------------------------------------
+_STRING     EQU    0
+_NUMERIC    EQU    1
+ 
+;----------------------------------------------------------------------
+; These are used for processing real numbers.
+;----------------------------------------------------------------------
+SP_DIGITS   EQU 7
+DP_DIGITS   EQU 15
+ 
+;----------------------------------------------------------------------
+; These are used in the video routines.
+;----------------------------------------------------------------------
+MDA         EQU     1
+CGA         EQU     2
+EGA         EQU     3
+MCGA        EQU     4
+VGA         EQU     5
+HGC         EQU     6
+HGCPLUS     EQU     7
+INCOLOR     EQU     8
+ 
+MDA_MON     EQU     1
+CGA_MON     EQU     2
+EGA_MON     EQU     3
+PS2_BW      EQU     4
+PS2_CO      EQU     5
+ 
+LINES350    EQU     1
+LINES400    EQU     2
+ 
+;----------------------------------------------------------------------
+; Used for TSRs and interrupts.
+;
+; The register stucture is used to pass and receive register values.
+;  This differs from BASIC which uses two seperate arrays, one input, one
+;  output.
+; The PDQ structure is identical to the BASIC structure, but has some
+;  extensions.  It includes several additional registers and some
+;  information that controls the interrupt.
+;
+;            ------------BASIC---------------- --------EXTENSION---------
+; REG_ARRAY: AX BX CX DX BP SI DI FLAGS DS ES | SS SP BUSY OLDINT PDQPROC
+; (offset)    0  2  4  6  8  A  C   E   10 12 | 14 16  18    1A     1E
+;----------------------------------------------------------------------
+STRUCT_AX               EQU     SI+0    ;0 PDQ Element #
+STRUCT_BX               EQU     SI+2    ;1
+STRUCT_CX               EQU     SI+4    ;2
+STRUCT_DX               EQU     SI+6    ;3
+STRUCT_BP               EQU     SI+8    ;4
+STRUCT_SI               EQU     SI+0AH  ;5
+STRUCT_DI               EQU     SI+0CH  ;6
+STRUCT_FLAGS            EQU     SI+0EH  ;7
+STRUCT_DS               EQU     SI+10H  ;8
+STRUCT_ES               EQU     SI+12H  ;9
+STRUCT_SS               EQU     SI+14H  ;10
+STRUCT_SP               EQU     SI+16H  ;11
+STRUCT_BUSY             EQU     SI+18H  ;12
+STRUCT_OLDINTOFF        EQU     SI+1AH  ;13
+STRUCT_OLDINTSEG        EQU     SI+1CH  ;14
+STRUCT_PDQOFF           EQU     SI+1EH  ;15
+STRUCT_PDQSEG           EQU     SI+20H  ;16
+STRUCT_INTNUM           EQU     SI+22H  ;17
+
+;----------------------------------------------------------------------
+; Macros.
+; These implement a direct far call and jump to save a few bytes.
+;----------------------------------------------------------------------
+CALLFAR     MACRO
+    DB  09AH
+        ENDM
+
+JMPFAR      MACRO
+    DB  0EAH
+        ENDM
+
+;----------------------------------------------------------------------
+; Used for swapping.
+;----------------------------------------------------------------------
+RE$OUTOFMEM     EQU     7       ;Out of memory
+RE$DISKFULL     EQU     61      ;Disk full
+RE$FEATUNAV     EQU     73      ;Feature unavailable
+
+;----------------------------------------------------------------------
+; R$SWAPLEN must be >= R$IVBUFLEN (400H = 1024 bytes).  Increase R$SWAPLEN
+; for faster swapping at the expense of a larger resident kernel size.
+; R$SWAPLEN MUST be a multiple of 10H.
+;----------------------------------------------------------------------
+R$IVBUFLEN      EQU     4*100H  ;do NOT change this

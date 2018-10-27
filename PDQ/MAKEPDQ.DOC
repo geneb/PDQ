@@ -1,0 +1,144 @@
+                          MAKEPDQ Instructions
+
+                                                     by Pierre Connolly
+                                                     
+
+    The compiling and linking process is getting more and more complex,
+especially if you want to optimize your programs for size.  With all the
+stub files and optional library files to choose from, it is not easy to
+type in everything correctly every time...
+
+    I have written this menu-driven interface that simplifies the task of
+compiling and linking.  You simply use pull-down menus to choose the compiler
+and linker options you want to use, the alternate libraries, and the string
+pool and stub files.  These are selected by checking the options from a
+pull-down menu.
+
+    There are three more menu items available. Those are the EDITOR, SETOPT
+and COMPILE menus.  The EDITOR brings up your editor with your BASIC source
+code to edit.  SETOPT sets all system options according to what has been
+appended previously to the source file by the ANNOTATE command.  COMPILE gets
+you to the actual compile/link process.
+
+
+
+                            INSTALLING MAKEPDQ
+
+    MAKEPDQ is really just an interface between you and your compiler.  It
+does not compile or link.  It passes your choices to the compiler and linker,
+so you will need to set up the MAKEPDQ.CNF configuration file to suit your
+own drive and directories.
+
+    Any declaration files such as PDQDECL.BAS should reside in the directory
+you start MAKEPDQ from.
+
+    All other ancillary files such as *.LIB, _*.OBJ and STR*.OBJ should be in
+a single directory as defined in the MAKEPDQ.CNF configuration file.  If the
+ancillary files are located in the current directory when MAKEPDQ is run,
+this line may be left blank after the equal sign in the configuration file.
+
+    The MAKEPDQ.COM and MAKEPDQ.CNF files may be located in any directory
+that is accessible via your system PATH.
+
+
+
+                    MAKEPDQ.CNF - THE CONFIGURATION FILE
+
+    The configuration file is heavily commented: check it before you start
+to be sure everything will be okay for your system.  There are paths to fill
+in that will most certainly be different for your own system.  Once you have
+modified MAKEPDQ.CNF, I suggest you delete the REM lines to speed up program
+execution.
+
+    It is not mandatory that MAKEPDQ.CNF reside in the same directory as the
+MAKEPDQ program, as long as it is accessible via your system PATH.
+
+
+
+                             USING MAKEPDQ
+
+    Before using MAKEPDQ you must compile and link it as follows:
+
+       bc makepdq /o/s ;
+       link /ex/nod/noe/far/packc makepdq +
+          _kill _locate _noerror _noread _noval _pdqval,, nul, [basic7] pdq ;
+
+    Then, to start MAKEPDQ type MAKEPDQ PROGNAME, where PROGNAME is the name
+of a BASIC source file (you do not type in the .BAS extension).  If PROGNAME
+does not exist, MAKEPDQ will prompt you to create it; if you ask to create
+the file, MAKEPDQ will write the following three lines to the file:
+
+    'PROGNAME.BAS
+    DEFINT A-Z
+    '$INCLUDE: 'PDQDECL'
+
+    You will be presented with a Lotus-style menu bar.  Use your keyboard
+keys as follows:
+
+    Esc                 - Quit MAKEPDQ
+    Left/Right arrows   - Highlight the menu item you want
+    Down arrow          - Open the highlighted menu window
+    Up/Down arrows      - Scroll bar once a pull-down menu has been opened
+    Enter               - Open the highlighted menu window, or close an
+                          already open window.
+                          NOTE: When the COMPILE pull down menu is open,
+                          pressing Enter initiates the compiling process.
+    Space Bar           - Select/de-select the highlighted option
+
+Additional notes:
+
+    1. The EDIT and SETOPT menu items have a short-cut key, which is the
+       down-arrow key.  It is assumed that when one of these two menu items
+       is highlighted and you press the down-arrow key, you want to execute
+       the command instead of opening the corresponding window.  This feature
+       can be defeated by modifying MAKEPDQ.BAS as indicated in the listing.
+
+    2. You can jump from an open window to the next without having to first
+       close the current window.  Just use the left/right arrow keys.
+
+
+
+                             SELECTING OPTIONS
+
+    You will notice that some options are pre-selected.  Those may be
+considered as "default" options, and are those I use mostly all the time.
+They may be de-selected if you want.
+
+    In the STRING window, you can of course select only one string pool file
+at a time.  MAKEPDQ will automatically de-select any other selected file as
+you select a new one.
+
+    The ANNOTATE option in the COMPILE window is an option that will append
+your compiling options to the BASIC source file.  This lets you see what
+compile and link options were used later, and allows the SETOPT option to
+set all the system options automatically when you have to recompile your
+program in the future.  See the end of MAKEPDQ.BAS for an example of how
+this is done.
+
+    The EXE2COM option in the COMPILE window uses the EXE2COM.COM program
+included with the PDQ distribution disks.
+
+    The REN TO COM option merely renames your .EXE file to a .COM
+
+    The LZEXE option is used to archive your executable file.  The resulting
+file is much smaller and only takes a fraction of a second to decompress at
+runtime.  Try it!  But you will need a copy of LZEXE.EXE which is largely
+available as shareware on phone BBS's everywhere.  You may also use any of
+the other executable file archivers available.  See MAKEPDQ.CNF for an
+example of how to effect this change.
+
+
+
+                               SPECIAL NOTES
+
+    Instead of shelling to DOS to execute the compiler and the linker,
+MAKEPDQ uses Interrupt 21h, function 4Bh so it has access to the exit codes
+from those programs.  This is how MAKEPDQ knows if there has been an error
+from the compiler or the linker.  If there was no error, the .OBJ file is
+deleted.  If there has been an error in the linking process, the .OBJ file
+is not deleted so that you can re-link without having to re-compile.
+
+    MAKEPDQ.COM will show up in color on a color monitor but it will display
+normally on a monochrome monitor as well.  At this time, the colors are not
+configurable.  If you wish to change the program colors, you will have to
+edit the source code and recompile.

@@ -1,0 +1,127 @@
+                                   README.VBD
+
+P.D.Q. now supports Microsoft's Visual BASIC for DOS (VB/DOS) as long as you
+are not using the VB/DOS forms feature.  This file describes that support and
+discusses some of the limitations you should be aware of when using VB/DOS.
+If you have QuickBASIC or BASIC PDS as well as VB/DOS, we strongly recommend
+that you continue to use those compilers when linking with P.D.Q.
+
+
+You must link with the PDQVBDOS.LIB file
+========================================
+
+Because of the differences between VB/DOS and QuickBASIC, you must link with
+PDQVBDOS.LIB instead of the normal PDQ.LIB file.  Unlike PDS programs where
+you link using both BASIC7.LIB and PDQ.LIB, VB/DOS programs should be linked
+with PDQVBDOS.LIB only.  Of course, if you are using an add-on library such
+as our QuickPak Professional, then you will specify that library as well.
+
+
+
+Use PDQVBDOS.QLB when running in the VB/DOS editor
+==================================================
+
+(No further explanation needed.)
+
+
+
+Using stub files with VB/DOS
+============================
+
+Several of the stub files provided with P.D.Q. had to be modified to work
+with VB/DOS.  Those stub files are identified by two leading underscores in
+their name, and you should use them instead of the original versions:
+
+  __CPRINT.OBJ  instead of  _CPRINT.OBJ
+  __KILL.OBJ    instead of  _KILL.OBJ
+  __PDQVAL.OBJ  instead of  _PDQVAL.OBJ
+
+
+
+P.D.Q. performance is worse with VB/DOS
+=======================================
+
+In VB/DOS, all quoted string literals are stored outside of the near memory
+area known as DGROUP.  Therefore, all of the P.D.Q. routines that accept a
+string (PRINT, LEFT$, OPEN, and so forth) were modified to accommodate that.
+This is handled by an internal routine that detects if the incoming string is
+a variable (in near memory) or a quoted literal string (in far memory).  The
+problem is that checking on the type of string adds overhead, which makes
+your programs slightly larger (less than 1K) and also slower.  Each time you
+use a quoted string with VB/DOS, it is copied into near memory and converted
+to a normal near-memory string which takes even more time and also wastes
+string memory.  This is the primary reason we suggest you use the QB or PDS
+compilers if you have them instead of VB/DOS.
+
+
+
+The VB/DOS linker and /STACK:
+=============================
+
+The new LINK that comes with VB/DOS does not appear to allow using the /STACK
+option.  If you have other versions of LINK you might try those.  Compiling
+with VB/DOS and linking with the BASIC 7.1 PDS version of LINK seems to work.
+
+
+
+Compiling and linking CLOCK.BAS
+===============================
+
+CLOCK.BAS uses a clever technique to avoid adding the P.D.Q. string handling
+code to the .EXE file, even though TIME$ is used.  This does not work when
+using VB/DOS, so you should link CLOCK with the STR00256.OBJ string stub file
+to make it use as little memory as possible:
+
+  link /nod/noe/packc/far clock str00256 _noval _noread , , nul, pdqvbdos ;
+
+
+
+TSR programs
+============
+
+Like any good compiler, the BC.EXE that comes with VB/DOS contains logic to
+optimize the performance and code size of your BASIC programs.  Optimizing
+compilers perform a variety of tricks, such as remembering the result of a
+calculation that is used more than once.  Consider the following BASIC code:
+
+  X% = Rows% * (Columns% - 1)
+  Y% = Rows% * (Columns% - 1)
+
+All versions of BC will calculate the expression only once, and assign the
+result first to X, and then to Y without repeating the same calculation.  But
+if you add a line number or line label to the second statement above, BC will
+generate code to calculate the expression twice.  Since a GOTO or GOSUB could
+jump to the second statement from somewhere else in the program, the compiler
+cannot be sure that the first calculation was performed.  Indeed, this is one
+good reason to avoid using line numbers or labels when they are not needed.
+
+VB/DOS adds a new type of optimization not present in earlier versions of BC
+that causes TSR programs to fail.  To establish a P.D.Q. hot-key or interrupt
+handler you call PopupHere or PointIntHere, and then use GOTO to jump over
+the code that follows.  The new VB/DOS compiler sees this unconditional GOTO
+and assumes the code that follows could never be executed, and thus does not
+generate the necessary code.  Therefore, you must add a line number to your
+programs immediately following the GOTO.  A line number has been added to all
+of the TSR example programs at that point so they will work with VB/DOS.  In
+those programs that trap more than one interrupt, or trap both a hotkey and
+an interrupt, a line number was added after each GOTO command.
+
+
+
+P.D.Q. far strings internal routines
+====================================
+
+VB/DOS uses far strings only, including quoted string constants.  Although we
+have not changed P.D.Q. to use far strings internally, it now must handle far
+string literals passed to it by BASIC:
+
+    PRINT "This quoted string is in far memory."
+or
+    Position = INSTR("ABCDE", Letter$)
+
+The code that handles copying far string constants to near string variables
+is in FARSTR.ASM in the VBDOS.ZIP file.  Comments in the file header explain
+how this works; however, it is not necessary understand string management to
+use P.D.Q.
+
+  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<

@@ -1,0 +1,284 @@
+     HISTORY.DOC -- list of all changes and corrections since P.D.Q. 3.00
+=============================================================================     
+
+EXE2COM.BAS                 10-27-91
+Rewritten to process the files in 4K chunks for greatly improved speed.
+
+PDQMSG.ASM                  10-28-91
+Added error 64, "Bad file name" to the list of returned error messages.
+
+FSTAMP.BAS                  10-31-91
+New utility program to set the date and time of a list of files.
+
+ENDTSR.ASM                  11-2-91
+Changed call to B$STOP to B$CEND to work with assembly language TSR programs.
+
+SWAPEMS.ASM                 11-4-91
+Fixed multi-page swapping bug.
+
+P$HOOKFP.ASM and _87ONLY.ASM    11-5-91
+Removed unnecessary Push/Pop instructions for AX, BX, CX, DX, and ES.
+
+_87ONLY.ASM                 11-5-91
+Added code to skip testing for an 80x87 if one is already known to be there.
+
+R$STR.ASM and _STR$FP.ASM   11-5-91
+Merged the differences in _STR$FP.ASM into the R$STR.ASM source file using
+conditional assembly to create either R$STR.OBJ or _STR$FP.OBJ.  Also fixed
+a bug in R$STR.ASM that barfed when using the statement PRINT .1#.
+
+DEMOSWAP.ASM                11-6-91
+New demo program for the assembly language toolbox part of P.D.Q. shows how
+to create swapping TSR programs and also serves as a swapping TSR template.
+^------------------------------ Version 3.01 ------------------------------^
+
+SCREEN2.ASM                 11-10-91
+Added code to clear P$PDQErr upon entry to the procedure.
+
+BUFOUT.ASM                  11-11-91
+New routine provides faster file sequential file access by buffering output.
+
+SQUAROOT.BAS                11-13-91
+Removed from P.D.Q. and replaced with TRIG.BAS (see below).
+
+TRIG.BAS                    11-13-91
+New source file provides a complete set of trig and other math functions.
+
+R$SWAP.ASM, SWAPDISK.ASM, SWAPEMS.ASM, R$PDQ.EQU    11-15-91
+Rearranged to allow a stub file to be used to set the swap buffer size.
+
+R$IVBUF.ASM                 11-15-91
+New file establishes the swap buffer size, also used to create _SWAP4K.OBJ.
+^------------------------------ Version 3.02 ------------------------------^
+
+BUFOUT.ASM                  11-11-91
+Minor cleanup: moved BufSeg and Pointer to .Data, removed extra code that
+cleared P$PDQErr after calling P$ZeroFile.
+
+COMPACT.ASM                 11-22-91
+Added three EVEN directives to make garbage collection even faster.
+
+TRIG.BAS                    11-22-91
+New file from Bruce Tonkin improves the speed of the various math routines.
+
+DEBUG.ASM                   11-24-91
+Added code to print a CRLF before the error messages.
+
+ASSIGN$.ASM, DELTEMPS.ASM, FREETEMP.ASM, GETTEMP.ASM    11-24-91
+Moved [Extrn P$TempDesc] from the .Data? to the .Data segment.
+
+PDQZIP.BAS                  11-24-91
+Fixed a bug where specifying an extension was ignored.  Added a "more" prompt
+for when there are more file than can fit on the screen at once.
+
+BUFIN.ASM                   11-24-91
+Fixed an intermittent bug where the returned string descriptor address in AX
+was undefined after the file is closed and the last string is returned.
+
+WORDCNT.ASM                 11-30-91
+New "for fun" assembly language demo program counts the words in a file.
+
+WINDOW.ASM                  11-30-91
+Complete set of new window managing routines, more versatile than VIEW PRINT.
+
+WINDOW.BAS                  11-30-91
+New demonstration program shows the new windowing routines above in context.
+
+B$FIST.ASM and SOUND.ASM    12-2-91
+Added FWAIT after each FP store command (needed on 8087 coprocessors only).
+
+PDQ.ASM                     12-6-91
+Changed the strategy to find where the BC_SA segment begins in memory.  This
+fixes a problem that has been in P.D.Q. all along that caused a problem when
+linking with .LIB files that contained BASIC code.
+
+R$SWAP.ASM                  12-6-91
+Rob changed the way buffering works.
+
+TRIG.BAS
+Added CONST invtwopi# = 1# / twopi#.  How the heck did -that- get left out?!
+^------------------------------ Version 3.03 ------------------------------^
+
+B$FVAL.ASM                  12-10-91
+Added code so VAL will recognize "E" and "D" numbers without requiring a
+leading plus or minus sign.
+
+FP_MATH.ASM                 12-13-91
+Increased precision in P$FP_DIV, fixed precision loss in P$FP_MUL.
+
+FPI38_39.ASM                12-13-91
+Fixed rounding in TR_Real8.
+
+P$HOOKFP.ASM, EMULATOR.ASM, PROCESOR.ASM    12-13-91
+Tightened code by combining several like services.
+^------------------------------ Version 3.04 ------------------------------^
+
+WINDOW.ASM                  12-20-91
+Added the WindowPrintCR, WindowRow, and WindowCol procedures.
+
+_EMONLY.ASM and _87ONLY.ASM 12-20-91
+Updated to cooperate with the changes in P$HOOKFP.ASM listed above in 3.04.
+
+R$CORE.ASM                  12-22-91
+Fixed a bug by turning off "popup pending" in the Int 8 handler.
+
+R$SWAP.ASM                  12-22-91
+Added code to swap stacks before popping; fixes a bug that happens only when
+programs are a certain size.
+^------------------------------ Version 3.05 ------------------------------^
+
+DISPLAY.BAS                 12-23-91
+New utility makes self-running README files that display themselves when run.
+
+WINDOWPW.ASM                12-28-91
+New assembler routine adds word-wrapping capability to the Window manager.
+
+WINDOW.BAS                  12-28-91
+Enhanced to incorporate the new word-wrapping feature listed above.
+^------------------------------ Version 3.06 ------------------------------^
+
+GETCPU.ASM                  1-10-92
+Added support for recognizing an 80486 processor.
+^------------------------------ Version 3.07 ------------------------------^
+
+WMTELL.BAS                  4-8-92
+Michael T. Boho fixed a couple of musical bugs.  Thanks Mike!
+
+MONSETUP.ASM                4-10-92
+Added Uses CX to the procedure definition because a user reported that his
+screwy '286 BIOS trashed CX (which screwed up WindowPrint and WindowPrintCR).
+
+R$CORE.ASM                  3-5-92
+Rob added extra code to make popping up safer.
+
+B$FVAL.ASM, EMULATOR.ASM, FP_MATH.ASM, and FPI36_37.ASM     4-25-92
+Paul P. fixed a bug that affected VAL in a rare comparison situation.
+^------------------------------ Version 3.08 ------------------------------^
+
+XTENSION.BAS and XTENSION.RSP   5-30-92
+New files help make Quick Libraries with P.D.Q. and non-P.D.Q. extensions.
+
+INCENV.BAS                  6-4-92
+New routine lets you increase the size of a P.D.Q. program's environment.
+
+PDQFORM.BAS                 6-16-92
+New demo/routines program formats numbers in scientific notation.
+
+PDQPAUSE                    7-2-92
+New utility pauses n seconds or until a key is pressed.
+
+SAFEDEL.BAS                 7-12-92
+New TSR shows how to install new or replacement DOS commands.
+
+MAPDEV.BAS                  7-12-92
+New utility displays all loaded device drivers.
+^------------------------------ Version 3.09 ------------------------------^
+
+DOLLAR$.ASM                 7-30-92
+Fixed a formatting bug that occurs with numbers less than .10 and was caused
+by Dollar$ assuming that STR does not return a leading blank.  Now Dollar$
+works correctly with or without the _STR$.OBJ stub file.
+
+_CPRINT.ASM                 8-28-92
+Added Uses SI to the B$PSSD Proc declaration which should have been there.
+
+SORT2.ASM                   9-25-92
+New case-insensitive version of the Sort routine -- for near strings only!
+
+SORT.BAS                    9-25-92
+New demo for both the Sort and Sort2 (see above) routines.
+
+PDQZIP.BAS                  10-4-92
+Added code to retrieve and print the ZIP file comment.
+
+COOK-RAW.BAS                10-16-92
+New program shows how to set the Cooked and Raw modes for device I/O.
+
+_PDQVAL.ASM                 11-10-92
+Changed the code to abort when a non-leading blank is encountered, rather
+than just ignore the blank and continue as it had been doing.
+
+GETCPU.ASM                  11-25-92
+Added some mysteriously missing lines that used to be there (??) to solve
+a crashing problem on 386- and 486-equipped computers.
+
+TSRFILE.ASM                 11-27-92
+Rob juggled the code around to use the TSR's PSP when handling DTA calls, to
+fix a problem with TSR programs that swapped to EMS memory.
+
+Added support for VB/DOS.  Additions include the VBDOS.ZIP and VBSOURCE.ZIP
+distribution files which hold the libraries and source code, respectively,
+for files related to VB/DOS.  Also added are new library files: PDQVBDOS.QLB
+and PDQVBDOS.LIB, and two new response files: QUICKVBD.RSP and PDQVBDOS.RSP.
+
+Besides support for VB/DOS P.D.Q. now honors several BASIC graphics commands.
+Non-static string functions are also supported now, although not with VB/DOS.
+See the README and README.VBD files for full information.  The newly added
+assembly language source files are:
+
+  EXITSFUN.ASM
+  LINE.ASM
+  LPOS.ASM
+  PALETTE2.ASM and PALETTEU.ASM
+  PCOPY.ASM
+  PLOT.ASM
+  POINT1.ASM, POINT2.ASM, and POINTS.ASM
+  PSET.ASM
+
+CLOSE.ASM                   12-24-92
+Added code to skip trying to close a file if it is not open.  Before this fix
+using CLOSE with no arguments did not try to close unopen files, but CLOSE
+with one or more specific file numbers did.  This fix was not applied to the
+SMALLDOS version of CLOSE.ASM to keep the code size as small as possible.
+
+SWAPDISK.ASM, ENVIRON2.ASM, and ENVIRON3.ASM   12-24-92
+Made VB/DOS versions by adding code to copy incoming literals to a temporary
+variable if necessary.
+
+*.BAS                       1-25-93
+Added one or more line numbers to all of the BASIC TSR and interrupt handler
+demonstration programs to accommodate VB/DOS.  See README.VBD for the reason.
+^------------------------------ Version 3.10 ------------------------------^
+
+KEYSUBST.BAS                4-9-93
+New TSR demo that shows how to exchange modifier keys.  Thanks to Matt Hart.
+
+EXITSFUN.ASM                5-19-93
+Changed 2nd from last line from Pop BX to Pop AX, since string functions must
+return their descriptor address in AX.
+^------------------------------ Version 3.11 ------------------------------^
+
+SHELDISK.ASM                10-14-93
+New SHELL routine swaps the main program to disk, also returns the exit code.
+
+BUFIN.ASM                   11-4-93
+Myrna Larson moved some code to guarantee that Done is cleared each time.
+
+_CPRINT.ASM                 12-16-93
+Changed the test to not print any control characters in color to distinguish
+only CHR$(8), CHR$(10), and CHR$(13).
+
+KEYCOUNT.BAS                12-21-93
+New demo TSR that shows how to read and reset the number of keys pressed from
+a foreground application.
+
+CHDRIVE.ASM (VB/DOS version)    2-19-94
+Fixed a bug where AX returned from P$FixStr was assigned to [BP+04] when it
+should have been assigned to [BX+04].
+
+MACRO.BAS                   3-13-94
+Added to header comments showing how to use a non-extended key as a trigger.
+^------------------------------ Version 3.12 ------------------------------^
+
+R$CORE.ASM, R$IVT.ASM, R$SWAP.ASM, and SWAPDISK.ASM
+Miscellaneous improvements as noted in the files' header revision comments.
+^------------------------------ Version 3.13 ------------------------------^
+
+INTRPT.ASM (only, not INTRPTX.ASM)  7-18-96
+Added code to test for DOS interrupts 25h and 26h (read/write disk sectors)
+and pop the flags that DOS stupidly leaves on the stack.
+
+READDBL.ASM and READSNGL.ASM        8-22-96
+Added Push/Pop SI around the procedure code, to fix a bug that happened when
+reading/inputting FP values in a FOR loop.
+^------------------------------ Version 3.14 ------------------------------^

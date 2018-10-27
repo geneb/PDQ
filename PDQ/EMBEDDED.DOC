@@ -1,0 +1,643 @@
+The following article is reprinted with permission from Embedded Systems
+Programming magazine.  We are including this with P.D.Q. because P.D.Q. is
+well suited to writing embedded applications.  Besides the information given
+in this article, you will also need a suitable Locate program to create the
+final ROMable code.  We recommend Paradigm Locate from Paradigm Systems, and
+information about that product may be obtained from the vendor at the address
+listed below.  Embedded Systems Programming is published by Miller Freeman
+Publications, 500 Howard Street, San Francisco, CA 94105, 415-397-1881.
+
+           =====================================================
+
+                     EMBEDDED APPLICATIONS IN BASIC
+                     
+                                                    by Rick Naro
+                                                    Paradigm Systems
+                                                    3301 Country Club Road
+                                                    Suite 2214
+                                                    Endwell, NY  13760
+
+C is considered by many to be the dominant high-level language for embedded
+system design, yet a number of other aspiring languages like to fancy
+themselves as the successor to C.  Nevertheless, the one language which we
+hear little about in embedded systems and can rightly claim to rival C in
+installed base and number of users is BASIC.  With a strong hold on the
+ubiquitous PC as well as in industrial automation and STDbus applications,
+BASIC was well established when C was in its infancy, and it will likely be
+the language of choice for many programmers for sometime into the future.
+
+BASIC has always been a major force at the 8-bit microcontroller level where
+a number of chip vendors such as Zilog, National Semiconductor and Intel have
+shipped ROM-based tiny BASIC interpreters as a standard product.  While
+convenient and easy to design-in, the overhead of the interpreter reduces the
+available CPU bandwidth by two or more orders of magnitude, restricting their
+use to applications totally insensitive to throughput.  These BASIC dialects
+are also less than satisfying, since many of the more modern language
+extensions are missing, as are luxuries such as string manipulation and
+interrupt handlers.
+
+Embedded designs based on the microprocessors in the Intel 80x86 and NEC
+V-Series families have the CPU bandwidth needed by more sophisticated
+applications, but have been lacking a BASIC suitable compiler.  While the
+PC platform has a number of powerful BASIC compilers, until very recently
+ROMing the output of a PC compiler like Microsoft QuickBASIC was simply not
+worth the effort.  Unlike its well-respected C cousin, Microsoft QuickBASIC
+lacks documented startup code, and the compiler is tightly-bound to
+undocumented helper functions in the run-time library.  Even if these
+barriers are overcome, the run-time overhead linked into every application
+is simply excessive for the tight ROM/RAM budgets of most embedded systems.
+
+What recently changed this less than appealing software development
+atmosphere is the introduction of a run-time library package called P.D.Q.
+from Crescent Software.  Make no mistake, P.D.Q. was not designed with the
+intent to service the relatively tiny embedded system market.  Yet by
+providing for the first time documented source startup code and replacement
+run-time libraries, Crescent Software has done a great favor to the embedded
+system programming community by opening up the best selling BASIC compiler on
+the PC for embedded applications.
+
+Using P.D.Q., it now becomes a simple matter to write small and large
+embedded applications using Microsoft QuickBASIC.  The technique is simple:
+customize the startup code and write a QuickBASIC application following the
+well-documented P.D.Q. run-time library restrictions.  The rest is limited
+only by your imagination and your desire to program in BASIC.
+
+
+
+MODIFYING THE STARTUP CODE
+
+Like any other compiler, some low-level assembly language work is required
+before the first line of BASIC source code can execute.  Like C, QuickBASIC
+assumes the existence of certain data structures which must be duplicated and
+kept in ROM.  Typically, the ROM/RAM organization of a QuickBASIC application
+follows that shown in Figure 1 below.
+
+
+                   Figure 1 - System Memory Map
+
+      ADDRESS                                     CLASS/GROUP NAMES
+               +-------------------------------+
+               |                               |
+               |        Reset Vector           |
+               |                               |
+       FFFF0H  +-------------------------------+
+               |                               |
+               ~         Unused ROM            ~
+               |                               |
+               +-------------------------------+
+               |                               |
+               |  ROM Copy of Initialized Data |  ROMDATA
+               |                               |
+               +-------------------------------+
+               |                               |
+               |       Application Code        |  BC_CODE
+               | Startup/Run-Time Library Code |  CODE
+               |                               |
+       F0000H  +-------------------------------+
+               |                               |
+               ~         Unused RAM            ~
+               |                               |
+               +-------------------------------+
+               |                               |
+               |      Uninitialized Data       |  BSS, STACK
+               |                               |
+               +-------------------------------+
+               |                               |
+               |       Initialized Data        |  BC_SEGS, DATA
+               |                               |
+       00400H  +-------------------------------+  DGROUP
+               |                               |
+               |     Interrupt vector table    |
+               |                               |
+       00000H  +-------------------------------+
+
+
+
+C language programmers may note some similarities.  In fact, because C-style
+segment naming conventions are employed, it is possible to link in Microsoft
+C modules to exploit some of the strengths of C, such as interrupt handlers,
+or tightly-coded assembly langauge routines.
+
+Since a hardware reset guarantees only the contents of the CS:IP registers,
+initialized data and the application stack must be supported by the startup
+code.  Setting up the stack is easy -- the majority of the startup code is
+dedicated to copying the initialized data in the class ROMDATA to RAM, and
+preparing the segment registers for the QuickBASIC application.
+
+
+     ;
+     ;   Copy the initialized data from its position in ROM to the target
+     ;   address in RAM
+     ;
+         mov     si, offset brdata       ; Offset in ROM
+         mov     di, offset dgroup:idata ; Starting offset of BEGDATA
+         mov     cx, offset dgroup:bdata ; Start of the BSS
+         sub     cx, di                  ; Subtract the two for a length
+         shr     cx, 1                   ; Convert to words
+         rep     movsw                   ; Copy the initialized data
+
+     ;
+     ;   Set up the segment registers for QuickBASIC conventions
+     ;
+         mov     ax, dgroup
+         mov     ds, ax
+         mov     es, ax
+         assume  ds:dgroup, es:dgroup
+
+     ;
+     ;   Zero out the BSS area
+     ;
+         xor     ax, ax                  ; Use a zero fill pattern
+         mov     di, offset dgroup:bdata ; Get the BSS start address
+         mov     cx, offset dgroup:edata ; Get the BSS end address
+         sub     cx, di                  ; Subtract the two for a length
+         shr     cx, 1                   ; Convert to the number of words
+         rep     stosw                   ; Zero out the BSS
+
+
+With the initialized data now in RAM and the uninitialized data cleared, the
+BASIC entry point is located and the QuickBASIC application assumes control
+of the CPU.  One small quirk of QuickBASIC is that the entry point is in an
+unnamed region of code, outside of any defined function or procedure.  This
+requires the startup code to dynamically look up the entry point at run-time
+as shown below.
+
+
+     ;
+     ;   The code produced by the BC compiler starts in a separate segment.
+     ;   Retrieve certain data parameters including the entry point of the
+     ;   BASIC program.
+     ;
+         mov     bx, bc_sa
+         mov     es, bx
+         assume  es:nothing
+         mov     bx, wptr es:[2]
+
+     ;
+     ;   Set up access to data declared in QuickBASIC
+     ;
+         push    ds
+         pop     es
+         assume  es:dgroup
+         mov     wptr [B$Seg], ds
+
+     ;
+     ;   Set up far RET to start of code
+     ;
+         push    bx
+         mov     cx, 30H
+         push    cx
+         retf
+
+
+That's really the bulk of the QuickBASIC startup code.  For those interested,
+the complete listing of the startup code, including the segment definitions,
+can be found in Listing 1.
+
+
+
+WRITING THE BASIC APPLICATION
+
+Like a child learning to walk, developing an embedded QuickBASIC application
+begins with a few uncertain steps which quickly become routine as proficiency
+is gained.  Assuming a thorough understanding of QuickBASIC, preventing our
+totally unimpeded progress to completion are restrictions imposed by the
+P.D.Q. library on the usable set of QuickBASIC statements and keywords.  
+First to go is floating point arithmetic, followed by the graphics and
+communication support.  Also missing is run-time error checking -- if you
+want it you will have to code it yourself.
+
+Our list of permitted functions is further winnowed by the removal of the
+QuickBASIC keywords which also contain DOS-dependencies.  Functions like
+BSAVE and MKDIR have no place in an embedded applications.  Other functions
+like PRINT and INPUT will require some minor tweaking to make them conform.
+Lest you think this subset is limiting, a partial listing of the statements
+and keywords supported by QuickBASIC for embedded applications can be found
+in table 1.
+
+
+        Table 1 - Supported QuickBASIC Statements/Keywords
+
+     AND            CALL           CASE           CHR$
+     DEF FN         DEF SEG        DEFINT         DEFLNG
+     DEFSTR         DO             ELSE           ELSEIF
+     END            END FUNCTION   END SUB        ENDIF
+     FOR            FOR            FUNCTION       GOSUB
+     HEX$           IF             INCLUDE        INP
+     INPUT$         LBOUND         LCASE$         LEFT$
+     LOOP           LTRIM$         MID$           NEXT
+     NOT            OR             OUT            PEEK
+     POKE           RETURN         RIGHT$         RTRIM$
+     SELECT         STEP           STEP           STR$
+     STRING$        SUB            THEN           TO
+     UBOUND         UCASE$         WEND           WHILE
+     XOR
+
+
+There are valid reasons for staying with a subset of the QuickBASIC command
+set.  For the most part, the missing functions are memory hogs, those catch-
+all functions which try to be anything and everything to the user.  In place
+of the missing functions, P.D.Q. provides equivalent functions which don't
+have their namesakes' memory requirements.  These substitutes include support
+for input/output to a console device, string manipulation, and sorting, among
+others.  By adopting a RISC-like approach to run-time library design, P.D.Q.
+trades off a small degree of functionality for a large reduction in code size
+and execution time.
+
+Other than avoiding the obviously DOS-dependent services which cannot
+reasonably be emulated, QuickBASIC, PDQ, and the ROMable startup code
+presented here provide a complete software development solution for high-
+powered BASIC applications.
+
+
+
+CUSTOMIZING THE RUN-TIME LIBRARIES
+
+The aforementioned restrictions are minor and are certainly not limiting for
+most embedded applications.  Yet in the event that a custom implementation is
+required, the P.D.Q. run-time library comes complete with the assembly
+language source code.
+
+Access to the run-time library source provides the necessary hook to permit
+the adaptation of the DOS-dependent routines like PRINT, which require a
+console device.  As shipped with P.D.Q., PRINT calls a common function which
+makes an Int 21h, sub-function 40h DOS call.  It is an easy matter to write a
+custom version of this output driver which outputs each character to a user
+defined function interfacing to the target system serial port.
+
+
+     _PrintIt proc, Work:Word  ; Does the actual printing
+
+         mov  PDQErr,0         ; Assume no error
+
+         mov  BX,Work          ; Get the address for Work$
+         mov  CX,[BX]          ; Put its length into CX
+         mov  BX,[BX+02]       ; And its address into BX
+     $1:
+         mov  al, [bx]         ; Modified code to
+         call _putc            ; output the characters
+         inc  bx
+         loop $1
+         ret                   ; Return to caller
+
+     _PrintIt endp
+
+
+Do the same for INPUT or other P.D.Q. replacement functions and you have a
+complete solution to the problem of embedded system console I/O.
+
+
+
+A SAMPLE APPLICATION
+
+Besides QuickBASIC, P.D.Q., and the Microsoft Assembler (MASM), the missing
+tools are the linker/locater.  Since the QuickBASIC compiler generates
+standard Microsoft object modules, the most convenient method is to use the
+Microsoft Linker (LINK) and one of the locate packages which can convert the
+.EXE file to an Intel OMF or Intel Hex file.  Tying together everything from
+assembling the startup code thru the linking/locating phase requires a MAKE
+file.  The following Microsoft MAKE file will build a simple QuickBASIC
+application from start to finish.
+
+
+     demo.obj:     demo.bas makefile
+        bc demo.bas ;
+
+     qb45.obj:     qb45.asm startup.inc makefile
+        masm qb45 ;
+
+     demo.rom:     qb45.obj demo.obj
+        link /ma /li $**, $*.rom, $*.map, pdq.lib ;
+
+     demo.hex:     demo.rom demo.cfg
+        locate -b $*
+
+
+Deserving a quick mention are some techniques for debugging the QuickBASIC
+application.  Whenever possible, the target system independent source modules
+should be checked out on the PC using the Microsoft CodeView debugger.
+Hardware/software integration will require either an in-circuit emulator or a
+remote source debugger, but the results are mixed since most tool vendors
+aren't anticipating BASIC and most tools only support the C subset of the
+CodeView debug information.  Yet despite these minor annoyances, it is now
+possible to create arbitrarily large Microsoft QuickBASIC applications for
+use in Intel 80x86 and NEC V-Series embedded systems.
+
+
+
+ACKNOWLEDGEMENTS
+
+Many thanks to Ethan Winer at Crescent Software for the permission to use
+portions of P.D.Q. in this article.
+
+======================================================================
+
+       Listing 1 - QuickBASIC Startup Code (QB45.ASM)
+
+
+        page    60, 132
+        name    qb45
+        title   Microsoft QuickBASIC Startup Code, Version 1.00
+
+;
+;       Embedded System Startup Code for Microsoft Basic/QuickBASIC
+;       Requires the Crescent Software PDQ run-time libraries
+;
+;       Copyright (C) 1989 Paradigm Systems.  All rights reserved.
+;       Portions Copyright (c) 1989 Crescent Software
+;       Portions Copyright (c) 1989 Schaefer Software, by Robert L. Hummel
+;
+;       Make sure that this startup module is specified first when linking
+;       the application.  Requires MASM 5.10 or TASM 1.0 to assemble.
+;
+;               masm qb45 /mx ;
+;               tasm qb45 /mx
+
+        INCLUDE startup.inc             ; Macros and other definitions
+
+        subttl  Segment ordering/alignment section
+        page
+;
+;       Segment and group declarations.  The order of these declarations is
+;       used to control the order of segments in the .EXE file, since the
+;       Microsoft linker copies segments in the same order they are
+;       encountered in the object files.
+;
+
+;
+;       These segments/classes will contain all code from the compiler or the
+;       P.D.Q. run-time libraries.  Class ENDCODE is used to mark the end of
+;       the code since some run-time modules have code segments defined but
+;       no code.
+;
+
+DefSeg  btext,    para,  public,  BC_CODE,     <>
+DefSeg  _text,    word,  public,  CODE,        <>
+DefSeg  etext,    para,  public,  ENDCODE,     <>
+
+;
+;       These segments contain uninitialized data.
+;
+DefSeg  br_data,  para,  public,  BLANK,       DGROUP
+DefSeg  br_skys,  para,  public,  BLANK,       DGROUP
+DefSeg  common,   para,  common,  BLANK,       DGROUP
+DefSeg  bc_data,  para,  public,  BC_VARS,     DGROUP
+DefSeg  nmalloc,  word,  public,  BC_VARS,     DGROUP
+DefSeg  enmalloc, word,  public,  BC_VARS,     DGROUP
+
+;
+;       These segments contain initialized data which must be copied from ROM
+;       to RAM by the startup code.
+;
+DefSeg  begdata,  para,  public,  NULL,        DGROUP
+DefSeg  bc_ft,    para,  public,  BC_SEGS,     DGROUP
+DefSeg  bc_cn,    para,  public,  BC_SEGS,     DGROUP
+DefSeg  bc_ds,    para,  public,  BC_SEGS,     DGROUP
+DefSeg  bc_sab,   para,  public,  BC_SEGS,     DGROUP
+DefSeg  bc_sa,    para,  public,  BC_SEGS,     DGROUP
+DefSeg  _data,    word,  public,  DATA,        DGROUP
+
+;
+;       The following segments contain the BSS (which is cleared) and
+;       the stack.
+;
+DefSeg  _bss,     para,  public,  BSS,         DGROUP
+DefSeg  stack,    para,  stack,   STACK,       DGROUP
+
+;
+;       The following segments are used to mark the place for ROM copies
+;       of initialized data for use by the startup code.
+;
+DefSeg  brd,      para,  public,  ROMDATA,     <>
+DefSeg  erd,      para,  public,  ENDROMDATA,  <>
+
+        subttl  Startup/initialization code
+        page
+_text   segment
+        assume  cs:_text
+
+startup proc    far
+        cli                             ; Disable interrupts
+        cld                             ; Make sure the direction is forward
+
+;
+;       Initialize the stack segment and pointer registers.
+;
+        mov     ax, dgroup              ; Get the value of the stack segment
+        mov     ss, ax                  ; Put in SS
+        mov     sp, offset DGROUP:tos   ; Load the TOS in SP
+        assume  ss:dgroup
+
+;
+;       Prepare the segment registers for initialization.  The initialized
+;       data is assumed to have been located in the class ROMDATA, which
+;       begins with the segment of the same name.
+;
+        mov     ax, dgroup              ; Initialized data destination
+        mov     es, ax
+        mov     ax, brd                 ; The source segment
+        mov     ds, ax
+
+;
+;       Copy the initialized data from its position in ROM to the target
+;       address in RAM.
+;
+        mov     si, offset brdata       ; Offset in ROM
+        mov     di, offset dgroup:idata ; Starting offset of BEGDATA
+        mov     cx, offset dgroup:bdata ; Start of the BSS
+        sub     cx, di                  ; Subtract the two for a length
+        jcxz    $$1                     ; Skip if zero length
+        shr     cx, 1                   ; Convert to words
+        rep     movsw                   ; Copy the initialized data
+$$1:
+
+;
+;       Setup the segment registers for QuickBASIC conventions.
+;
+        mov     ax, dgroup
+        mov     ds, ax
+        mov     es, ax
+        assume  ds:dgroup, es:dgroup
+
+;
+;       Zero out the BSS area.
+;
+        xor     ax, ax                  ; Use a zero fill pattern
+        mov     di, offset dgroup:bdata ; Get the start of the BSS class
+        mov     cx, offset dgroup:edata ; Get the end address
+        sub     cx, di                  ; Subtract the two for a length
+        jcxz    $$30                    ; Skip if zero
+        shr     cx, 1                   ; Convert to the number of words
+        rep     stosw                   ; Zero out the BSS
+$$30:
+
+;
+;       The code produced by the BC compiler starts in a separate segment.
+;       Retrieve certain data parameters including the entry point of the
+;       BASIC program.
+;
+        mov     bx, bc_sa               ; Get segment of data area
+        mov     es, bx                  ; in ES
+        assume  es:nothing
+        mov     bx, wptr es:[2]         ; Segment of BASIC code
+
+;
+;       Create work area on the stack. 10 bytes (0Ah) are reserved by BASIC
+;       and duplicated here.
+;
+        mov     es, bx                  ; Access data area
+        assume  es:nothing
+        mov     cx, wptr es:[22H]       ; Program stack frame
+        add     cx, 0AH
+
+        mov     bp, sp                  ; Top of stack
+        sub     sp, cx                  ; Adjust pointer
+        mov     wptr [_SPSAVE], sp
+
+;
+;       Set up access to BASIC data.
+;
+        push    ds                      ; Put DGROUP in ES
+        pop     es
+        assume  es:dgroup
+        mov     wptr [B$Seg], ds        ; set default for DEF SEG
+
+;
+;       Set up FAR RET to start of code by pushing CS:IP on the stack.
+;
+        push    bx                      ; on stack
+        mov     cx, 30H                 ; Offset of basic program
+        push    cx                      ; on stack
+        ret                             ; Far return to start program
+
+;
+;       QuickBASIC termination conditions.
+;
+PUBLIC  $AC, $DAC, B$CEND, B$CENP, B$STOP
+$AC     proc    far                     ; BC sometimes calls this to end
+$DAC    proc    far                     ; If called, end the program
+B$CEND  proc    far                     ; Called when you use END
+B$CENP  proc    far                     ; Called when a program runs out
+B$STOP  proc    far                     ; Called when a program uses STOP
+        jmp     startup                 ; Restart the application
+B$STOP  endp
+B$CENP  endp
+B$CEND  endp
+$DAC    endp
+$AC     endp
+
+startup endp
+
+_text   ends
+
+etext   segment
+        db      16 dup (?)              ; Buffer segment for zero length
+                                        ; code modules
+etext   ends
+
+        subttl  Data declarations
+        page
+begdata segment
+public  idata
+idata   label   byte                    ; Start of initialized data
+begdata ends
+
+_data   segment
+extrn   B$Seg:Word                      ; Holds the default DEF SEG value
+extrn   TermCode:Byte                   ; Holds the ERRORLEVEL value
+extrn   _SPSAVE:WORD                    ; This saves the stack pointer
+_data   ends
+
+_bss    segment
+public  bdata
+bdata   label   byte                    ; Start of the BSS class
+                                        ; and end of initialized data
+_bss    ends
+
+;
+;       The following segments are used to mark the place for ROM copies
+;       of initialized data for use by the startup code.
+;
+brd     segment                         ; BRD - Begin ROM Data
+brdata  label   byte                    ; Start of the ROMDATA class
+brd     ends
+erd     segment                         ; ERD - End ROM Data
+        db      16 dup (?)              ; Force a new segment
+erd     ends
+
+stack   segment                         ; Stack start, end of BSS class
+public  edata, tos
+edata   label   word
+        db      2048 dup (?)
+        even                            ; Force word alignment
+tos     label   word                    ; Define the top of stack
+stack   ends
+
+        end     startup
+
+
+
+
+                 Listing 2 - Startup Helper (STARTUP.INC)
+
+
+        .xlist
+;
+;       Common assembly language definitions/macros for Paradigm LOCATE
+;       Copyright (C) 1989 Paradigm Systems.  All rights reserved.
+;
+
+IF1                                     ; Pass 1 definitions
+IFDEF   ??Version                       ; Check for TASM
+NOWARN  RES                             ; Turn off reserved words warnings
+ENDIF   ; ??Version
+
+        %out    Paradigm LOCATE Compiler Startup Version 1.00
+        %out    Assembling for the medium memory model
+        @CodeSize = 1
+        @DataSize = 0
+        pptr    equ     far ptr
+
+;
+;       Pointer shorthand for assembly language.
+;
+bptr    equ     byte ptr                ; Data references
+wptr    equ     word ptr
+dptr    equ     dword ptr
+qptr    equ     qword ptr
+nptr    equ     near ptr                ; Function references
+fptr    equ     far ptr
+
+;
+;       Define a macro for defining segments.  The paramters in order are:
+;
+;               - Segment name
+;               - Alignment
+;               - Combine type
+;               - Class name
+;               - Group name
+;
+;       All macro arguments are mandatory except for a group name.
+;
+DefSeg  macro   sname, salign, scomb, sclass, sgroup
+.errb   <sname>
+.errb   <salign>
+.errb   <scomb>
+.errb   <sclass>
+sname   segment salign  scomb   '&sclass'
+sname   ends
+ifnb    <sgroup>
+sgroup  group   sname
+endif
+endm
+
+;
+;       Some useful constants for checking code/data memory models and
+;       the floating point options.
+;
+MM_NEAR         equ     0               ; Small code/data model definition
+MM_FAR          equ     1               ; Large code/data model definition
+MM_HUGE         equ     2               ; Huge code/data model definition
+
+ENDIF   ; IF1
+        .list

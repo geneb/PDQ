@@ -1,0 +1,54 @@
+PRO.LIB   +
+Absolute  +
+BIOSInky  +
+BIOSInpt  +
+Blockopy  +
+ColorDat  +
+ColorSR   +
+Cursor    +
+CursorSR  +
+ErrData   +
+FlushQlb  +
+Get1Byte  +
+Get1Long  +
+Get1Type  +
+Get1Word  +
+GetSeg    +
+HercMode  +
+Intrpt    +
+IntrptX   +
+MidChar   +
+MidCharS  +
+Monitor   +
+MonSetup  +
+NoSnow    +
+PDQComp   +
+PDQExist  +
+PDQInkey  +
+PDQInput  +
+PDQMsg    +
+PDQParse  +
+PDQPeek2  +
+PDQPoke2  +
+PDQPrint  +
+PDQPWide  +
+PDQRand   +
+PDQSetMS  +
+PDQSetWD  +
+PDQShl    +
+PDQShr    +
+PDQSound  +
+PDQRest   +
+SeekLoc   +
+Set1Byte  +
+Set1Long  +
+Set1Type  +
+Set1Word  +
+SetDelim  +
+Sort      +
+ValQLB    +
+WindowPW  +
+WindoQLB
+PDQPRO.QLB
+NUL
+BQLB45.LIB;
