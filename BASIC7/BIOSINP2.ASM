@@ -1,6 +1,7 @@
 ;********* BIOSINP2.ASM - BASIC 7 far strings version
 
-;Copyright (c) 1991 Ethan Winer
+; Copyright (c) 1991 Ethan Winer
+; Released to the Public Domain on 10/26/18.
 
 .Model Medium, Basic
     Extrn B$LOCT   :Proc        ;this locates the cursor (LOCATE.ASM)
